@@ -1,5 +1,11 @@
 # Code style: Python (flake8) + Go (gofmt). Mirrors algorithm/lazyllm Makefile pattern.
-.PHONY: help lint install-flake8 lint-python lint-go test build up up-build down clear reset-kb reset-all fresh-start file-watcher-dirs file-watcher-build file-watcher-run file-watcher-start file-watcher-stop
+
+# On Windows, ensure Make uses Git Bash instead of cmd.exe.
+ifeq ($(OS),Windows_NT)
+SHELL := bash
+endif
+
+.PHONY: help lint install-flake8 lint-python lint-go test build up up-build down clear reset-kb reset-all fresh-start file-watcher-dirs file-watcher-build file-watcher-run file-watcher-start file-watcher-stop desktop-dev-windows-exe
 .DEFAULT_GOAL := help
 
 # Use legacy Docker builder by default to avoid pulling moby/buildkit:buildx-stable-1 from Docker Hub
@@ -34,6 +40,8 @@ _COMPOSE := DOCKER_BUILDKIT=$(DOCKER_BUILDKIT) docker compose $(if $(COMPOSE_PRO
 # ---------------------------------------------------------------------------
 # Read MIRROR_PROFILE from .env via shell before any include, so that setting
 # MIRROR_PROFILE=intl in .env correctly selects the intl profile file.
+# Skip on Windows: sed/grep may not be available, and mirror env is for Docker only.
+ifneq ($(OS),Windows_NT)
 MIRROR_PROFILE ?= $(or $(shell grep -m1 '^MIRROR_PROFILE=' .env 2>/dev/null | cut -d= -f2-),cn)
 _MIRROR_ENV_FILE := .env.mirrors.$(MIRROR_PROFILE)
 ifneq (,$(wildcard $(_MIRROR_ENV_FILE)))
@@ -45,6 +53,7 @@ ifneq (,$(wildcard .env))
 include .env
 export $(shell sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' .env)
 endif
+endif
 
 # ---------------------------------------------------------------------------
 # Scan / file-watcher process
@@ -52,40 +61,21 @@ endif
 # file-watcher runs in compose by default. Host mode is kept for local
 # debugging and disables the compose file-watcher service on make up.
 # Keep its writable roots under the compose volume root by default.
-# LAZYMIND_FILE_WATCHER_BASE_ROOT is exported as a compose-friendly path;
-# internal Makefile bookkeeping uses the resolved absolute path below.
-export LAZYMIND_FILE_WATCHER_BASE_ROOT ?= ./data/scan
-LAZYMIND_FILE_WATCHER_BASE_ROOT_ABS := $(abspath $(LAZYMIND_FILE_WATCHER_BASE_ROOT))
-export LAZYMIND_FILE_WATCHER_MODE ?= container
-
-# Auto-detect host OS for path style and default watch directory.
-# Override in .env or on the command line if needed.
-ifeq ($(OS),Windows_NT)
-  export LAZYMIND_FILE_WATCHER_HOST_PATH_STYLE ?= windows
-  export LAZYMIND_FILE_WATCHER_WATCH_HOST_DIR  ?= D:/
-else
-  _UNAME_S := $(shell uname -s 2>/dev/null)
-  _UNAME_R := $(shell uname -r 2>/dev/null | tr '[:upper:]' '[:lower:]')
-  ifeq ($(_UNAME_S),Darwin)
-    export LAZYMIND_FILE_WATCHER_HOST_PATH_STYLE ?= posix
-    export LAZYMIND_FILE_WATCHER_WATCH_HOST_DIR  ?= $(HOME)
-  else ifneq (,$(findstring microsoft,$(_UNAME_R))$(findstring wsl,$(_UNAME_R)))
-    export LAZYMIND_FILE_WATCHER_HOST_PATH_STYLE ?= posix
-    export LAZYMIND_FILE_WATCHER_WATCH_HOST_DIR  ?= /mnt
-  else
-    export LAZYMIND_FILE_WATCHER_HOST_PATH_STYLE ?= posix
-    export LAZYMIND_FILE_WATCHER_WATCH_HOST_DIR  ?= $(HOME)
-  endif
-endif
-
-_LAZYMIND_FW_WATCH_HOST_DIR_RAW := $(LAZYMIND_FILE_WATCHER_WATCH_HOST_DIR)
-_LAZYMIND_FW_WATCH_HOST_DIR_ABS := $(abspath $(_LAZYMIND_FW_WATCH_HOST_DIR_RAW))
-override LAZYMIND_FILE_WATCHER_WATCH_HOST_DIR := $(if $(filter windows,$(LAZYMIND_FILE_WATCHER_HOST_PATH_STYLE)),$(_LAZYMIND_FW_WATCH_HOST_DIR_RAW),$(_LAZYMIND_FW_WATCH_HOST_DIR_ABS))
-LAZYMIND_FILE_WATCHER_DIR := backend/file-watcher
-LAZYMIND_FILE_WATCHER_BIN := $(LAZYMIND_FILE_WATCHER_DIR)/file_watcher
-LAZYMIND_FILE_WATCHER_CONFIG := $(LAZYMIND_FILE_WATCHER_DIR)/configs/agent.yaml
-LAZYMIND_FILE_WATCHER_PID := $(LAZYMIND_FILE_WATCHER_BASE_ROOT_ABS)/run/file_watcher.pid
-LAZYMIND_FILE_WATCHER_CONSOLE_LOG := $(LAZYMIND_FILE_WATCHER_BASE_ROOT_ABS)/logs/file_watcher.console.log
+# RAGSCAN_BASE_ROOT is exported as a compose-friendly path; internal Makefile
+# bookkeeping uses the resolved absolute path below.
+export RAGSCAN_BASE_ROOT ?= ./data/scan
+RAGSCAN_BASE_ROOT_ABS := $(abspath $(RAGSCAN_BASE_ROOT))
+export RAGSCAN_FILE_WATCHER_MODE ?= container
+export RAGSCAN_HOST_PATH_STYLE ?= posix
+export RAGSCAN_WATCH_HOST_DIR ?= ./data/watch
+RAGSCAN_WATCH_HOST_DIR_RAW := $(RAGSCAN_WATCH_HOST_DIR)
+RAGSCAN_WATCH_HOST_DIR_ABS := $(abspath $(RAGSCAN_WATCH_HOST_DIR_RAW))
+override RAGSCAN_WATCH_HOST_DIR := $(if $(filter windows,$(RAGSCAN_HOST_PATH_STYLE)),$(RAGSCAN_WATCH_HOST_DIR_RAW),$(RAGSCAN_WATCH_HOST_DIR_ABS))
+RAGSCAN_FILE_WATCHER_DIR := backend/file-watcher
+RAGSCAN_FILE_WATCHER_BIN := $(RAGSCAN_FILE_WATCHER_DIR)/file_watcher
+RAGSCAN_FILE_WATCHER_CONFIG := $(RAGSCAN_FILE_WATCHER_DIR)/configs/agent.yaml
+RAGSCAN_FILE_WATCHER_PID := $(RAGSCAN_BASE_ROOT_ABS)/run/file_watcher.pid
+RAGSCAN_FILE_WATCHER_CONSOLE_LOG := $(RAGSCAN_BASE_ROOT_ABS)/logs/file_watcher.console.log
 
 # ---------------------------------------------------------------------------
 # Environment variables (override via: make up VAR=value, or set in .env)
@@ -167,7 +157,7 @@ help:
 	@echo "LazyMind Make targets:"
 	@echo "  make up         - Start services in background (with derived profiles)"
 	@echo "                    file-watcher runs in compose by default"
-	@echo "                    Use LAZYMIND_FILE_WATCHER_MODE=host for host-process debugging"
+	@echo "                    Use RAGSCAN_FILE_WATCHER_MODE=host for host-process debugging"
 	@echo "                    Use SERVICES=svc1,svc2 to start specific services only"
 	@echo "  make up-build   - Build images and start services"
 	@echo "                    Use SERVICES=svc1,svc2 to target specific services"
@@ -227,12 +217,11 @@ test:
 # Only build/start mineru/paddleocr when LAZYMIND_OCR_SERVER_TYPE is mineru/paddleocr
 # AND LAZYMIND_OCR_SERVER_URL points to the internal service (user has not specified external URL).
 # Only mineru has build:; paddleocr/milvus/opensearch use image: only, so only needed for up.
-#  OCR_SERVER_TYPE	OCR_SERVICE_VARIANT	     OCR_SERVER_URL	     _need_mineru      _need_paddleocr
-# mineru/paddleocr         online                Any                 false             false
-# mineru/paddleocr          none                 Any                 false             false
-#      mineru              offline        http://mineru:8000         true              false
-#     paddleocr            offline       http://paddleocr:8000       false             true
-# mineru/paddleocr         offline            external URL           false             false
+#  OCR_SERVER_TYPE	OCR_SERVICE_VARIANT	     OCR_SERVER_URL	     _need_mineru
+# mineru/paddleocr         online                Any                 false
+#      mineru          offline or none     http://mineru:8000         true
+#     paddleocr        offline or none   http://paddleocr:8000        true
+# mineru/paddleocr         offline            external URL           false 
 
 _need_mineru := $(and $(filter mineru,$(LAZYMIND_OCR_SERVER_TYPE)),$(findstring mineru:8000,$(LAZYMIND_OCR_SERVER_URL)),$(filter-out online,$(LAZYMIND_OCR_SERVICE_VARIANT)))
 _need_paddleocr := $(and $(filter paddleocr,$(LAZYMIND_OCR_SERVER_TYPE)),$(findstring paddleocr:8080,$(LAZYMIND_OCR_SERVER_URL)),$(filter-out online,$(LAZYMIND_OCR_SERVICE_VARIANT)))
@@ -248,7 +237,7 @@ _need_opensearch_dashboard := $(and $(_need_opensearch),$(_enable_opensearch_das
 
 # Shared compose profile flags for up/down/up-build
 _COMPOSE_PROFILES := $(strip $(if $(_need_mineru),--profile mineru) $(if $(_need_paddleocr),--profile paddleocr) $(if $(_need_milvus),--profile milvus) $(if $(_need_opensearch),--profile opensearch) $(if $(_need_milvus_dashboard),--profile milvus-dashboard) $(if $(_need_opensearch_dashboard),--profile opensearch-dashboard))
-_COMPOSE_FILE_WATCHER_SCALE := $(if $(filter container,$(LAZYMIND_FILE_WATCHER_MODE)),,--scale file-watcher=0)
+_COMPOSE_FILE_WATCHER_SCALE := $(if $(filter container,$(RAGSCAN_FILE_WATCHER_MODE)),,--scale file-watcher=0)
 
 # Only init submodules when not yet cloned; if already present (even with different commit), do nothing. Never recursive.
 _SUBMODULE_INIT = @git submodule status | grep -q '^-' && git submodule update --init || true
@@ -259,17 +248,17 @@ build:
 		$(if $(SERVICES),$(subst $(comma), ,$(SERVICES)),)
 
 file-watcher-dirs:
-	@mkdir -p "$(LAZYMIND_FILE_WATCHER_BASE_ROOT_ABS)" "$(LAZYMIND_FILE_WATCHER_BASE_ROOT_ABS)/staging" "$(LAZYMIND_FILE_WATCHER_BASE_ROOT_ABS)/snapshots" "$(LAZYMIND_FILE_WATCHER_BASE_ROOT_ABS)/logs" "$(LAZYMIND_FILE_WATCHER_BASE_ROOT_ABS)/run" "$(LAZYMIND_FILE_WATCHER_WATCH_HOST_DIR)"
+	@mkdir -p "$(RAGSCAN_BASE_ROOT_ABS)" "$(RAGSCAN_BASE_ROOT_ABS)/staging" "$(RAGSCAN_BASE_ROOT_ABS)/snapshots" "$(RAGSCAN_BASE_ROOT_ABS)/logs" "$(RAGSCAN_BASE_ROOT_ABS)/run" "$(RAGSCAN_WATCH_HOST_DIR)"
 
 file-watcher-build: file-watcher-stop file-watcher-dirs
 	@echo "🔨 Rebuilding file-watcher..."
-	@rm -f "$(LAZYMIND_FILE_WATCHER_BIN)"
-	@cd "$(LAZYMIND_FILE_WATCHER_DIR)" && $(GO) build -o file_watcher ./cmd/main.go
-	@echo "✅ file-watcher built: $(LAZYMIND_FILE_WATCHER_BIN)"
+	@rm -f "$(RAGSCAN_FILE_WATCHER_BIN)"
+	@cd "$(RAGSCAN_FILE_WATCHER_DIR)" && $(GO) build -o file_watcher ./cmd/main.go
+	@echo "✅ file-watcher built: $(RAGSCAN_FILE_WATCHER_BIN)"
 
 file-watcher-stop:
-	@if [ -f "$(LAZYMIND_FILE_WATCHER_PID)" ]; then \
-		pid=$$(cat "$(LAZYMIND_FILE_WATCHER_PID)"); \
+	@if [ -f "$(RAGSCAN_FILE_WATCHER_PID)" ]; then \
+		pid=$$(cat "$(RAGSCAN_FILE_WATCHER_PID)"); \
 		if [ -n "$$pid" ] && kill -0 "$$pid" 2>/dev/null; then \
 			echo "🛑 Stopping file-watcher ($$pid)..."; \
 			kill "$$pid"; \
@@ -281,7 +270,7 @@ file-watcher-stop:
 				echo "⚠️  file-watcher still running ($$pid), please stop it manually if needed."; \
 			fi; \
 		fi; \
-		rm -f "$(LAZYMIND_FILE_WATCHER_PID)"; \
+		rm -f "$(RAGSCAN_FILE_WATCHER_PID)"; \
 	fi
 	@if command -v lsof >/dev/null 2>&1; then \
 		for pid in $$(lsof -t -nP -iTCP:19090 -sTCP:LISTEN 2>/dev/null | sort -u); do \
@@ -296,16 +285,16 @@ file-watcher-stop:
 	fi
 
 file-watcher-run: file-watcher-stop file-watcher-dirs
-	@echo "🚀 Starting file-watcher (LAZYMIND_FILE_WATCHER_BASE_ROOT=$(LAZYMIND_FILE_WATCHER_BASE_ROOT_ABS))..."
-	@LAZYMIND_FILE_WATCHER_BASE_ROOT="$(LAZYMIND_FILE_WATCHER_BASE_ROOT_ABS)" nohup sh -c 'cd "$(LAZYMIND_FILE_WATCHER_DIR)" && exec ./file_watcher -config configs/agent.yaml' >> "$(LAZYMIND_FILE_WATCHER_CONSOLE_LOG)" 2>&1 & echo $$! > "$(LAZYMIND_FILE_WATCHER_PID)"
+	@echo "🚀 Starting file-watcher (RAGSCAN_BASE_ROOT=$(RAGSCAN_BASE_ROOT_ABS))..."
+	@RAGSCAN_BASE_ROOT="$(RAGSCAN_BASE_ROOT_ABS)" nohup sh -c 'cd "$(RAGSCAN_FILE_WATCHER_DIR)" && exec ./file_watcher -config configs/agent.yaml' >> "$(RAGSCAN_FILE_WATCHER_CONSOLE_LOG)" 2>&1 & echo $$! > "$(RAGSCAN_FILE_WATCHER_PID)"
 	@sleep 1
-	@pid=$$(cat "$(LAZYMIND_FILE_WATCHER_PID)"); \
+	@pid=$$(cat "$(RAGSCAN_FILE_WATCHER_PID)"); \
 	if kill -0 "$$pid" 2>/dev/null; then \
-		echo "✅ file-watcher started ($$pid), log: $(LAZYMIND_FILE_WATCHER_CONSOLE_LOG)"; \
+		echo "✅ file-watcher started ($$pid), log: $(RAGSCAN_FILE_WATCHER_CONSOLE_LOG)"; \
 	else \
 		echo "❌ file-watcher failed to start. Recent log:"; \
-		tail -n 80 "$(LAZYMIND_FILE_WATCHER_CONSOLE_LOG)" 2>/dev/null || true; \
-		rm -f "$(LAZYMIND_FILE_WATCHER_PID)"; \
+		tail -n 80 "$(RAGSCAN_FILE_WATCHER_CONSOLE_LOG)" 2>/dev/null || true; \
+		rm -f "$(RAGSCAN_FILE_WATCHER_PID)"; \
 		exit 1; \
 	fi
 
@@ -313,7 +302,7 @@ file-watcher-start: file-watcher-build
 	@$(MAKE) --no-print-directory file-watcher-run
 
 up:
-	@if [ "$(LAZYMIND_FILE_WATCHER_MODE)" = "container" ]; then \
+	@if [ "$(RAGSCAN_FILE_WATCHER_MODE)" = "container" ]; then \
 		$(MAKE) --no-print-directory file-watcher-stop; \
 		$(MAKE) --no-print-directory file-watcher-dirs; \
 	else \
@@ -322,21 +311,21 @@ up:
 	$(_SUBMODULE_INIT)
 	@$(_COMPOSE) $(_COMPOSE_PROFILES) up $(_COMPOSE_FILE_WATCHER_SCALE) -d \
 		$(if $(SERVICES),$(subst $(comma), ,$(SERVICES)),)
-	@if [ "$(LAZYMIND_FILE_WATCHER_MODE)" != "container" ]; then \
+	@if [ "$(RAGSCAN_FILE_WATCHER_MODE)" != "container" ]; then \
 		$(MAKE) --no-print-directory file-watcher-run; \
 	else \
 		echo "✅ file-watcher container enabled"; \
 	fi
 
 down:
-	@if [ "$(LAZYMIND_FILE_WATCHER_MODE)" != "container" ]; then \
+	@if [ "$(RAGSCAN_FILE_WATCHER_MODE)" != "container" ]; then \
 		$(MAKE) --no-print-directory file-watcher-stop; \
 	fi
 	@$(_COMPOSE) $(_COMPOSE_PROFILES) down \
 		$(if $(SERVICES),$(subst $(comma), ,$(SERVICES)),)
 
 up-build:
-	@if [ "$(LAZYMIND_FILE_WATCHER_MODE)" = "container" ]; then \
+	@if [ "$(RAGSCAN_FILE_WATCHER_MODE)" = "container" ]; then \
 		$(MAKE) --no-print-directory file-watcher-stop; \
 		$(MAKE) --no-print-directory file-watcher-dirs; \
 	else \
@@ -345,14 +334,14 @@ up-build:
 	$(_SUBMODULE_INIT)
 	@$(_COMPOSE) $(_COMPOSE_PROFILES) up $(_COMPOSE_FILE_WATCHER_SCALE) --build -d \
 		$(if $(SERVICES),$(subst $(comma), ,$(SERVICES)),)
-	@if [ "$(LAZYMIND_FILE_WATCHER_MODE)" != "container" ]; then \
+	@if [ "$(RAGSCAN_FILE_WATCHER_MODE)" != "container" ]; then \
 		$(MAKE) --no-print-directory file-watcher-run; \
 	else \
 		echo "✅ file-watcher container enabled"; \
 	fi
 
 clear:
-	@if [ "$(LAZYMIND_FILE_WATCHER_MODE)" != "container" ]; then \
+	@if [ "$(RAGSCAN_FILE_WATCHER_MODE)" != "container" ]; then \
 		$(MAKE) --no-print-directory file-watcher-stop; \
 	fi
 	@echo "🧹 Stopping containers and removing volumes (keeping built images/base cache)..."
@@ -418,7 +407,7 @@ endef
 export _RESET_KB_SQL_APP
 
 reset-kb:
-	@if [ "$(LAZYMIND_FILE_WATCHER_MODE)" != "container" ]; then \
+	@if [ "$(RAGSCAN_FILE_WATCHER_MODE)" != "container" ]; then \
 		$(MAKE) --no-print-directory file-watcher-stop; \
 	fi
 	@echo "⏹  Stopping all services (keeping db running for SQL cleanup)..."
@@ -468,3 +457,73 @@ reset-all: reset-kb
 fresh-start: reset-kb
 	@echo "🚀 Rebuilding images and starting services with LAZYMIND_RESET_ALGO_ON_STARTUP=true..."
 	@$(MAKE) --no-print-directory up-build LAZYMIND_RESET_ALGO_ON_STARTUP=true
+
+# ---------------------------------------------------------------------------
+# desktop-dev-windows-exe: Build a self-contained Windows desktop dev directory at ~/LazyMind_dev/
+# that can be launched by double-clicking LazyMind.exe (no console window).
+#
+# Layout:
+#   ~/LazyMind_dev/
+#     LazyMind.exe          - Launcher (double-click to start, no console)
+#     bin/core.exe          - Go core backend
+#     electron/             - Electron runtime (from node_modules)
+#     app/                  - Compiled Electron main + preload + package.json
+#     app/resources/        - Splash screen, default config, docs
+#     renderer/             - Frontend static build (desktop mode)
+#     data/                 - Runtime data (created on first launch)
+# ---------------------------------------------------------------------------
+DESKTOP_DEV_DIR := $(or $(HOME),$(USERPROFILE))/LazyMind_dev
+DESKTOP_SRC     := desktop
+FRONTEND_SRC    := frontend
+CORE_SRC        := backend/core
+
+desktop-dev-windows-exe:
+	@echo "=== Building LazyMind Desktop Dev Package ==="
+	@echo "Target: $(DESKTOP_DEV_DIR)"
+	@echo ""
+	@echo "[0/5] Cleaning old processes..."
+	@taskkill //F //IM core.exe 2>/dev/null || true
+	@taskkill //F //IM electron.exe 2>/dev/null || true
+	@ping -n 2 127.0.0.1 >nul 2>&1 || true
+	@rm -rf "$(DESKTOP_DEV_DIR)"
+	@mkdir -p "$(DESKTOP_DEV_DIR)/bin" "$(DESKTOP_DEV_DIR)/data"
+	@# ---- 1. Build Go core ----
+	@echo "[1/5] Building Go core..."
+	@cd "$(CORE_SRC)" && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 $(GO) build -o "$(DESKTOP_DEV_DIR)/bin/core.exe" .
+	@echo "      -> bin/core.exe"
+	@mkdir -p "$(DESKTOP_DEV_DIR)/migrations/sqlite"
+	@cp "$(CORE_SRC)"/migrations/sqlite/*.sql "$(DESKTOP_DEV_DIR)/migrations/sqlite/"
+	@echo "      -> migrations/sqlite/"
+	@# ---- 2. Build frontend ----
+	@echo "[2/5] Building frontend (desktop mode)..."
+	@cd "$(FRONTEND_SRC)" && VITE_LAZYMIND_MODE=desktop npx vite build --outDir "$(DESKTOP_DEV_DIR)/renderer"
+	@echo "      -> renderer/"
+	@# ---- 3. Copy Electron runtime (must happen before asar placement) ----
+	@echo "[3/5] Copying Electron runtime..."
+	@cp -r "$(DESKTOP_SRC)/node_modules/electron/dist" "$(DESKTOP_DEV_DIR)/electron"
+	@echo "      -> electron/"
+	@# ---- 4. Bundle Electron app + pack asar ----
+	@echo "[4/5] Bundling Electron app into asar..."
+	@cd "$(DESKTOP_SRC)" && npx esbuild src/main/index.ts --bundle --platform=node --format=cjs --target=node20 --external:electron --outfile=dist/main.js
+	@cd "$(DESKTOP_SRC)" && npx esbuild src/preload/index.ts --bundle --platform=node --format=cjs --target=node20 --external:electron --outfile=dist/preload.js
+	@mkdir -p "$(DESKTOP_DEV_DIR)/_asar_staging/resources"
+	@cp "$(DESKTOP_SRC)/dist/main.js" "$(DESKTOP_DEV_DIR)/_asar_staging/"
+	@cp "$(DESKTOP_SRC)/dist/preload.js" "$(DESKTOP_DEV_DIR)/_asar_staging/"
+	@printf '{\n  "name": "lazymind-desktop",\n  "version": "0.1.0",\n  "main": "main.js"\n}\n' > "$(DESKTOP_DEV_DIR)/_asar_staging/package.json"
+	@cp "$(DESKTOP_SRC)/resources/splash.html" "$(DESKTOP_DEV_DIR)/_asar_staging/resources/"
+	@cp -r "$(DESKTOP_SRC)/resources/icons" "$(DESKTOP_DEV_DIR)/_asar_staging/resources/"
+	@cp -r "$(DESKTOP_SRC)/resources/templates" "$(DESKTOP_DEV_DIR)/_asar_staging/resources/"
+	@cp -r "$(DESKTOP_SRC)/resources/default-docs" "$(DESKTOP_DEV_DIR)/_asar_staging/resources/"
+	@cd "$(DESKTOP_SRC)" && npx asar pack "$(DESKTOP_DEV_DIR)/_asar_staging" "$(DESKTOP_DEV_DIR)/electron/resources/app.asar"
+	@rm -rf "$(DESKTOP_DEV_DIR)/_asar_staging"
+	@echo "      -> electron/resources/app.asar"
+	@# ---- 5. Build launcher exe ----
+	@echo "[5/5] Building launcher exe..."
+	@cd "$(DESKTOP_SRC)/cmd/launcher" && goversioninfo -icon=../../resources/icons/icon.ico
+	@cd "$(DESKTOP_SRC)/cmd/launcher" && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 $(GO) build -ldflags "-H=windowsgui -s -w" -o "$(DESKTOP_DEV_DIR)/LazyMind.exe" .
+	@rm -f "$(DESKTOP_SRC)/cmd/launcher/resource.syso"
+	@echo "      -> LazyMind.exe"
+	@echo ""
+	@echo "=== Done ==="
+	@echo "Launch: double-click $(DESKTOP_DEV_DIR)/LazyMind.exe"
+	@echo ""

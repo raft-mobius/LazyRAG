@@ -104,6 +104,11 @@ export const AgentAppsAuth = {
   },
 
   getAuthHeaders(): Record<string, string> {
+    // In Desktop mode, the local proxy handles identity injection
+    if ((window as any).__DESKTOP_MODE__ || (window as any).lazymind) {
+      return {};
+    }
+
     const userInfo = this.getUserInfo();
     const headers: Record<string, string> = {};
 
@@ -129,7 +134,7 @@ export const AgentAppsAuth = {
     } catch (error) {
       console.error("Logout from server failed:", error);
     }
-    
+
     this.clearUserInfo();
     const target = redirectUrl || this.getLoginUrl();
     window.location.href = target;
@@ -155,18 +160,18 @@ export const AgentAppsAuth = {
 
   async refreshAccessToken(): Promise<string> {
     const refreshToken = this.getRefreshToken();
-    
+
     if (!refreshToken) {
       throw new Error("No refresh token available");
     }
 
     const refreshUrl = `${BASE_URL}/api/authservice/auth/refresh`;
-    
+
     const refreshAxios = axios.create({
       timeout: 10000,
       headers: { "Content-Type": "application/json" },
     });
-    
+
     const response = await refreshAxios.post(
       refreshUrl,
       { refresh_token: refreshToken }
@@ -174,7 +179,7 @@ export const AgentAppsAuth = {
 
     const responseData = response.data;
     const loginData = responseData.data || responseData;
-    
+
     if (!loginData.access_token) {
       throw new Error("刷新失败，未获取到新的 access_token");
     }

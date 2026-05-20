@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Button, Form, Input, Layout, Modal, Popover, message } from "antd";
+import { isDesktopMode } from "@/utils/platform";
 import {
   CodeOutlined,
   SettingOutlined,
@@ -584,7 +585,7 @@ export default function MainLayout() {
     }
   };
 
-  if (!isLoggedIn) {
+  if (!isLoggedIn && !isDesktopMode()) {
     return <Navigate to="/login" replace />;
   }
 
