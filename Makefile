@@ -484,7 +484,7 @@ desktop-dev-windows-exe:
 	@echo "[0/5] Cleaning old processes..."
 	@taskkill //F //IM core.exe 2>/dev/null || true
 	@taskkill //F //IM electron.exe 2>/dev/null || true
-	@ping -n 2 127.0.0.1 >nul 2>&1 || true
+	@sleep 2 2>/dev/null || ping -n 2 127.0.0.1 >/dev/null 2>&1 || true
 	@rm -rf "$(DESKTOP_DEV_DIR)"
 	@mkdir -p "$(DESKTOP_DEV_DIR)/bin" "$(DESKTOP_DEV_DIR)/data"
 	@# ---- 1. Build Go core ----
