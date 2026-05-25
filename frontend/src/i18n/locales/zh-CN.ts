@@ -240,6 +240,7 @@ const zhCN = {
     aiEvolution: "AI自进化",
     knowledgeBase: "知识库",
     systemManagement: "系统管理",
+    assistantManagement: "助理管理",
     developer: "开发者",
     userManagement: "用户管理",
     dataSourceManagement: "数据源管理",

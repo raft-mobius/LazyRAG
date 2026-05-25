@@ -265,6 +265,7 @@ const enUS = {
     aiEvolution: "AI Self-Evolution",
     knowledgeBase: "Knowledge Base",
     systemManagement: "System",
+    assistantManagement: "Assistants",
     developer: "Developer",
     userManagement: "Users",
     dataSourceManagement: "Data Sources",

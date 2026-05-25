@@ -31,6 +31,7 @@ import { SelfEvolutionHomePage, SelfEvolutionDetailPage } from "@/modules/selfEv
 import { getAntdLocale } from "@/i18n/antdLocale";
 import AssistantManagement from "@/modules/assistants/AssistantManagement";
 import ModelConfigDesktop from "@/modules/model-providers/ModelConfigDesktop";
+import { isDesktopMode } from "@/utils/platform";
 import { DesktopOnlyRoute } from "./guards";
 
 export default function AppRouter() {
@@ -89,9 +90,13 @@ export default function AppRouter() {
               element={<MemoryReviewPage />}
             />
           </Route>
-          <Route path="self-evolution" element={<SelfEvolutionHomePage />} />
-          <Route path="self-evolution/detail/:threadId" element={<SelfEvolutionDetailPage />} />
-          <Route path="self-evolution/:threadId" element={<SelfEvolutionDetailPage />} />
+          {!isDesktopMode() && (
+            <>
+              <Route path="self-evolution" element={<SelfEvolutionHomePage />} />
+              <Route path="self-evolution/detail/:threadId" element={<SelfEvolutionDetailPage />} />
+              <Route path="self-evolution/:threadId" element={<SelfEvolutionDetailPage />} />
+            </>
+          )}
           <Route path="assistants" element={<DesktopOnlyRoute><AssistantManagement /></DesktopOnlyRoute>} />
           <Route path="desktop/model-config" element={<DesktopOnlyRoute><ModelConfigDesktop /></DesktopOnlyRoute>} />
         </Route>

@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Button, Form, Input, Layout, Modal, Popover, message } from "antd";
-import { isDesktopMode } from "@/utils/platform";
 import {
   CodeOutlined,
+  CloseOutlined,
   SettingOutlined,
   SearchOutlined,
   AppstoreOutlined,
@@ -36,6 +36,7 @@ import {
   isDeveloperModeActive,
   setDeveloperModeActive,
 } from "@/utils/developerMode";
+import { isDesktopMode } from "@/utils/platform";
 import RecordList from "@/modules/chat/components/RecordList";
 import {
   CHAT_RESUME_CONVERSATION_KEY,
@@ -106,7 +107,7 @@ export default function MainLayout() {
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSubmitting, setProfileSubmitting] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [sidebarSearchText, setSidebarSearchText] = useState("");
+  const [historySearchOpen, setHistorySearchOpen] = useState(false);
   const [isMenuCollapsed, setIsMenuCollapsed] = useState(readStoredMainMenuCollapsed);
   const [shouldRenderMenuContent, setShouldRenderMenuContent] = useState(
     () => !readStoredMainMenuCollapsed(),
@@ -118,8 +119,8 @@ export default function MainLayout() {
 
   const settingsMenuItems = [
     {
-      key: "/admin",
-      label: t("layout.systemManagement"),
+      key: isDesktopMode() ? "/assistants" : "/admin",
+      label: isDesktopMode() ? t("layout.assistantManagement") : t("layout.systemManagement"),
       icon: <TeamOutlined className="settings-popover-icon" />,
     },
     ...(isAdminUser
@@ -155,7 +156,7 @@ export default function MainLayout() {
       label: t("layout.memoryManagement"),
       icon: <AppstoreOutlined />,
     },
-    ...(isAdminUser && developerActive
+    ...(isAdminUser && developerActive && !isDesktopMode()
       ? [
           {
             key: "/self-evolution",
@@ -333,6 +334,7 @@ export default function MainLayout() {
     }
     setCurrentSidebarConversationId(conversationId);
     emitConversationSelection(conversationId);
+    setHistorySearchOpen(false);
     navigate("/agent/chat/home");
   };
 
@@ -614,6 +616,14 @@ export default function MainLayout() {
                 <img src={logoImage} alt="logo" />
               )}
             </button>
+            <Button
+              type="text"
+              className="sider-search-button"
+              icon={<SearchOutlined />}
+              onClick={() => setHistorySearchOpen(true)}
+              aria-label={t("chat.searchConversation")}
+              title={t("chat.searchConversation")}
+            />
             <button
               type="button"
               className="sider-inline-toggle"
@@ -667,22 +677,10 @@ export default function MainLayout() {
                     <span className="sider-module-icon">
                       <CodeOutlined />
                     </span>
-                    <span className="sider-module-text">{t("layout.aiEvolution")}</span>
+                    <span className="sider-module-text">{isDesktopMode() ? t("layout.memoryManagement") : t("layout.aiEvolution")}</span>
                     <RightOutlined className="sider-module-arrow" />
                   </button>
                 </Popover>
-              </div>
-              <div className="sider-history-search">
-                <Input
-                  className="sider-history-search-input"
-                  type="search"
-                  prefix={<SearchOutlined />}
-                  allowClear
-                  value={sidebarSearchText}
-                  placeholder={t("chat.searchConversation")}
-                  aria-label={t("chat.searchConversation")}
-                  onChange={(event) => setSidebarSearchText(event.target.value)}
-                />
               </div>
             </>
           ) : null}
@@ -693,7 +691,6 @@ export default function MainLayout() {
                 hideSearch
                 showBatchActions
                 title={t("chat.recentConversations")}
-                searchText={sidebarSearchText}
                 currentSessionId={currentSidebarConversationId}
                 onSelected={handleSidebarConversationSelected}
                 onRemove={handleSidebarConversationRemoved}
@@ -724,22 +721,24 @@ export default function MainLayout() {
                       )}
                     </Button>
                   ))}
-                  {isLoggedIn ? (
-                    <Button
-                      type="text"
-                      className="settings-popover-button"
-                      onClick={handleLogout}
-                    >
-                      <span>{t("layout.logout")}</span>
-                    </Button>
-                  ) : (
-                    <Button
-                      type="text"
-                      className="settings-popover-button"
-                      onClick={handleGoLogin}
-                    >
-                      <span>{t("layout.goLogin")}</span>
-                    </Button>
+                  {!isDesktopMode() && (
+                    isLoggedIn ? (
+                      <Button
+                        type="text"
+                        className="settings-popover-button"
+                        onClick={handleLogout}
+                      >
+                        <span>{t("layout.logout")}</span>
+                      </Button>
+                    ) : (
+                      <Button
+                        type="text"
+                        className="settings-popover-button"
+                        onClick={handleGoLogin}
+                      >
+                        <span>{t("layout.goLogin")}</span>
+                      </Button>
+                    )
                   )}
                 </div>
               }
@@ -807,6 +806,27 @@ export default function MainLayout() {
           </div>
         </Content>
       </Layout>
+      <Modal
+        open={historySearchOpen}
+        footer={null}
+        closeIcon={<CloseOutlined />}
+        onCancel={() => setHistorySearchOpen(false)}
+        className="history-search-modal"
+        width={640}
+        centered
+        destroyOnHidden
+      >
+        <div className="history-search-tabs">
+          <button type="button" className="history-search-tab active">
+            {t("chat.chatHistory")}
+          </button>
+        </div>
+        <RecordList
+          currentSessionId={currentSidebarConversationId}
+          onSelected={handleSidebarConversationSelected}
+          onRemove={handleSidebarConversationRemoved}
+        />
+      </Modal>
       <Modal
         title={t("profile.title")}
         open={profileModalOpen}

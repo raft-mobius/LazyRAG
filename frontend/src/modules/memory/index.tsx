@@ -36,6 +36,7 @@ import {
   DEVELOPER_ACTIVE_EVENT,
   isDeveloperModeActive,
 } from "@/utils/developerMode";
+import { isDesktopMode } from "@/utils/platform";
 import type { GroupItem, UserItem } from "@/api/generated/auth-client";
 import { createGroupApi, createUserApi } from "@/modules/signin/utils/request";
 import GlossaryInboxModal from "./components/GlossaryInboxModal";
@@ -4496,7 +4497,7 @@ export default function MemoryManagement() {
             isSkillUpdatePending(record.updateStatus) ||
             hasBackendReviewableSuggestions);
         const autoEvoStatusMeta =
-          activeTab === "skills" && record.autoEvo
+          !isDesktopMode() && activeTab === "skills" && record.autoEvo
             ? getAutoEvoStatusMeta(record.autoEvoApplyStatus)
             : null;
 
@@ -4582,11 +4583,11 @@ export default function MemoryManagement() {
 
   const genericColumns: ColumnsType<StructuredAsset> = [
     ...structuredInfoColumns,
-    {
+    ...(!isDesktopMode() ? [{
       title: t("admin.memoryAutoEvo"),
       key: "autoEvo",
       width: 90,
-      render: (_value, record) => {
+      render: (_value: unknown, record: StructuredAsset) => {
         const disabledByRemoveSuggestion =
           activeTab === "skills" && Boolean(record.hasPendingRemoveSuggestion);
         const switchNode = (
@@ -4629,7 +4630,7 @@ export default function MemoryManagement() {
           switchNode
         );
       },
-    },
+    }] : []),
     {
       title: t("admin.memoryOperations"),
       key: "actions",
@@ -4750,7 +4751,7 @@ export default function MemoryManagement() {
             isReviewableSuggestionStatus(record.suggestionStatus));
         const showPendingTag =
           !record.autoEvo && (Boolean(pendingProposal) || hasBackendReviewableSuggestions);
-        const autoEvoStatusMeta = record.autoEvo
+        const autoEvoStatusMeta = !isDesktopMode() && record.autoEvo
           ? getAutoEvoStatusMeta(record.autoEvoApplyStatus)
           : null;
 
@@ -4805,11 +4806,11 @@ export default function MemoryManagement() {
           </div>
         ),
     },
-    {
+    ...(!isDesktopMode() ? [{
       title: t("admin.memoryAutoEvo"),
       key: "autoEvo",
       width: 90,
-      render: (_value, record) => (
+      render: (_value: unknown, record: StructuredAsset) => (
         <Switch
           checked={Boolean(record.autoEvo)}
           loading={experienceAutoEvoLoading.has(record.id)}
@@ -4843,7 +4844,7 @@ export default function MemoryManagement() {
           }}
         />
       ),
-    },
+    }] : []),
     {
       title: t("admin.memoryOperations"),
       key: "actions",

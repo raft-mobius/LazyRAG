@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AgentAppsAuth } from "@/components/auth";
+import { isDesktopMode } from "@/utils/platform";
 import logoImage from "@/public/Lazy.png";
 import "./index.scss";
 
@@ -81,6 +82,10 @@ export default function AdminLayout() {
   useEffect(() => {
     // Cleanup effect no longer needed
   }, []);
+
+  if (isDesktopMode()) {
+    return <Navigate to="/assistants" replace />;
+  }
 
   if (!isLoggedIn) {
     return <Navigate to="/login" replace />;
