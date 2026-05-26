@@ -3,6 +3,7 @@
  * Compatible with AuthServiceApi login (token stored after username/password login).
  */
 import axios from "axios";
+import { getAPIBaseURL } from "@/utils/platform";
 
 const STORAGE_KEY = "lazymind:user";
 export const AUTH_USER_CHANGE_EVENT = "lazymind:user-change";
@@ -10,6 +11,7 @@ export const AUTH_USER_CHANGE_EVENT = "lazymind:user-change";
 const BASE_URL =
   (typeof import.meta !== "undefined" &&
     (import.meta as any).env?.VITE_API_BASE_URL) ||
+  getAPIBaseURL() ||
   (typeof window !== "undefined" && window.location.origin) ||
   "";
 

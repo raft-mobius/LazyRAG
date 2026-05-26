@@ -496,7 +496,7 @@ desktop-dev-windows-exe:
 	@echo "      -> migrations/sqlite/"
 	@# ---- 2. Build frontend ----
 	@echo "[2/5] Building frontend (desktop mode)..."
-	@cd "$(FRONTEND_SRC)" && VITE_LAZYMIND_MODE=desktop npx vite build --outDir "$(DESKTOP_DEV_DIR)/renderer"
+	@cd "$(FRONTEND_SRC)" && VITE_LAZYMIND_MODE=desktop npx vite build --outDir "$(DESKTOP_DEV_DIR)/renderer" --emptyOutDir
 	@echo "      -> renderer/"
 	@# ---- 3. Copy Electron runtime (must happen before asar placement) ----
 	@echo "[3/5] Copying Electron runtime..."

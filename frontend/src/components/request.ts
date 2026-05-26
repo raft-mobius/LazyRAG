@@ -2,11 +2,13 @@ import axios from "axios";
 import type { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from "axios";
 import { message } from "antd";
 import { AgentAppsAuth } from "@/components/auth";
+import { getAPIBaseURL } from "@/utils/platform";
 import i18n from "@/i18n";
 
 export const BASE_URL =
   (typeof import.meta !== "undefined" &&
     (import.meta as any).env?.VITE_API_BASE_URL) ||
+  getAPIBaseURL() ||
   (typeof window !== "undefined" && window.location.origin) ||
   "";
 

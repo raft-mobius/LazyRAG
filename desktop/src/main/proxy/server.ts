@@ -93,6 +93,13 @@ export function createProxyServer(config: ProxyConfig): ProxyServer {
         delete req.headers['x-user-id'];
         delete req.headers['x-user-name'];
 
+        // Reject requests if identity is not yet initialized
+        if (!currentUserId) {
+          res.writeHead(503, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Identity not initialized', code: 'IDENTITY_NOT_READY' }));
+          return;
+        }
+
         // Inject identity headers
         req.headers['x-user-id'] = currentUserId;
         req.headers['x-user-name'] = encodeURIComponent(currentUserName);

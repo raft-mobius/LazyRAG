@@ -76,45 +76,59 @@ export function createAssistantManager(proxy: ProxyServer): AssistantManager {
     });
   }
 
+  const MAX_INIT_RETRIES = 10;
+  const INIT_RETRY_DELAY_MS = 2000;
+
+  async function attemptInitialize(): Promise<void> {
+    // Bootstrap (idempotent)
+    await callAuthService('POST', '/api/authservice/desktop/bootstrap');
+    logger.info('assistant-manager', 'Bootstrap completed');
+
+    // Get identity
+    const identity = await callAuthService<{ user_id: string; username: string; display_name: string }>(
+      'GET',
+      '/api/authservice/desktop/identity'
+    );
+
+    // Get assistant list
+    assistantList = await callAuthService<AssistantInfo[]>(
+      'GET',
+      '/api/authservice/desktop/assistants'
+    );
+
+    // Restore persisted state or use default
+    const savedState = loadPersistedState();
+    const targetId = savedState?.currentId || identity.user_id;
+
+    const found = assistantList.find((a) => a.id === targetId);
+    if (found) {
+      currentAssistant = found;
+    } else if (assistantList.length > 0) {
+      currentAssistant = assistantList[0];
+    }
+
+    if (currentAssistant) {
+      proxy.setCurrentIdentity(currentAssistant.id, currentAssistant.displayName);
+      persistState(currentAssistant.id);
+    }
+
+    logger.info('assistant-manager', `Current assistant: ${currentAssistant?.displayName || 'none'}`);
+  }
+
   const manager: AssistantManager = {
     async initialize() {
-      try {
-        // Bootstrap (idempotent)
-        await callAuthService('POST', '/api/authservice/desktop/bootstrap');
-        logger.info('assistant-manager', 'Bootstrap completed');
-
-        // Get identity
-        const identity = await callAuthService<{ user_id: string; username: string; display_name: string }>(
-          'GET',
-          '/api/authservice/desktop/identity'
-        );
-
-        // Get assistant list
-        assistantList = await callAuthService<AssistantInfo[]>(
-          'GET',
-          '/api/authservice/desktop/assistants'
-        );
-
-        // Restore persisted state or use default
-        const savedState = loadPersistedState();
-        const targetId = savedState?.currentId || identity.user_id;
-
-        const found = assistantList.find((a) => a.id === targetId);
-        if (found) {
-          currentAssistant = found;
-        } else if (assistantList.length > 0) {
-          currentAssistant = assistantList[0];
+      for (let attempt = 1; attempt <= MAX_INIT_RETRIES; attempt++) {
+        try {
+          await attemptInitialize();
+          return;
+        } catch (err) {
+          logger.warn('assistant-manager', `Initialize attempt ${attempt}/${MAX_INIT_RETRIES} failed: ${err}`);
+          if (attempt < MAX_INIT_RETRIES) {
+            await new Promise((r) => setTimeout(r, INIT_RETRY_DELAY_MS));
+          }
         }
-
-        if (currentAssistant) {
-          proxy.setCurrentIdentity(currentAssistant.id, currentAssistant.displayName);
-          persistState(currentAssistant.id);
-        }
-
-        logger.info('assistant-manager', `Current assistant: ${currentAssistant?.displayName || 'none'}`);
-      } catch (err) {
-        logger.error('assistant-manager', `Initialize failed: ${err}`);
       }
+      logger.error('assistant-manager', 'All initialization attempts exhausted — identity not set');
     },
 
     getCurrent() {
