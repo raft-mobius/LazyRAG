@@ -1,0 +1,72 @@
+{
+  "providers": [
+    {
+      "id": "provider-deepseek",
+      "name": "DeepSeek",
+      "description": "DeepSeek AI models",
+      "base_url": "https://api.deepseek.com",
+      "groups": [
+        {
+          "id": "group-deepseek-default",
+          "name": "Default",
+          "base_url": "https://api.deepseek.com",
+          "api_key": "",
+          "is_verified": false,
+          "models": [
+            {
+              "id": "model-deepseek-chat",
+              "name": "deepseek-chat",
+              "model_type": "llm-chat",
+              "base_url": "",
+              "is_default": true
+            },
+            {
+              "id": "model-deepseek-chat-evo",
+              "name": "deepseek-chat",
+              "model_type": "llm-evo",
+              "base_url": "",
+              "is_default": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "provider-siliconflow",
+      "name": "SiliconFlow",
+      "description": "SiliconFlow model APIs",
+      "base_url": "https://api.siliconflow.cn",
+      "groups": [
+        {
+          "id": "group-siliconflow-default",
+          "name": "Default",
+          "base_url": "https://api.siliconflow.cn/v1",
+          "api_key": "",
+          "is_verified": false,
+          "models": [
+            {
+              "id": "model-bge-m3",
+              "name": "BAAI/bge-m3",
+              "model_type": "embedding",
+              "base_url": "",
+              "is_default": true
+            },
+            {
+              "id": "model-bge-reranker",
+              "name": "BAAI/bge-reranker-v2-m3",
+              "model_type": "rerank",
+              "base_url": "",
+              "is_default": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "selected_models": [
+    { "model_type": "llm-chat", "model_id": "model-deepseek-chat" },
+    { "model_type": "llm-evo", "model_id": "model-deepseek-chat-evo" },
+    { "model_type": "embedding", "model_id": "model-bge-m3" },
+    { "model_type": "rerank", "model_id": "model-bge-reranker" }
+  ]
+}

@@ -48,6 +48,7 @@ export function getServiceConfigs(
         SERVER_PORT: String(SERVICE_PORTS.core),
         SERVER_HOST: '127.0.0.1',
         LAZYMIND_LOCAL_SECRET: localSecret,
+        LAZYMIND_MODEL_CONFIG_FILE: `${dataDirRoot}/model_config.json`,
       },
       healthCheck: {
         type: 'http',

@@ -50,6 +50,10 @@ type groupModelListResponse struct {
 
 // AddGroupModel inserts a user-defined model row under a connection group (custom model name and model_type).
 func AddGroupModel(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		addGroupModelFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)
@@ -158,6 +162,10 @@ func AddGroupModel(w http.ResponseWriter, r *http.Request) {
 
 // ListGroupModels returns active models under a connection group.
 func ListGroupModels(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		listGroupModelsFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)
@@ -235,6 +243,10 @@ func ListGroupModels(w http.ResponseWriter, r *http.Request) {
 // ListUserModelsByModelType lists the current user's models across all user_model_providers,
 // filtered by required query model_type. Response shape matches ListGroupModels.
 func ListUserModelsByModelType(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		listUserModelsByModelTypeFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)
@@ -318,6 +330,10 @@ type deleteGroupModelResponse struct {
 
 // DeleteGroupModel soft-deletes one user_model_provider_group_models row under the given group.
 func DeleteGroupModel(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		deleteGroupModelFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)

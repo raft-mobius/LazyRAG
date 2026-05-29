@@ -134,6 +134,13 @@ func main() {
 	// text/PrompttextInitialize（DB + Redis）。DB text ACL text；Redis textConversationtext/text/text。
 	store.Init(db.DB, readonlyDB.DB, store.MustRedisFromEnv())
 
+	// Initialize file-based model config store in desktop mode.
+	if strings.TrimSpace(os.Getenv("LAZYMIND_MODE")) == "desktop" {
+		if p := strings.TrimSpace(os.Getenv("LAZYMIND_MODEL_CONFIG_FILE")); p != "" {
+			modelprovider.InitFileStore(p)
+		}
+	}
+
 	r := mux.NewRouter()
 	r.UseEncodedPath()
 	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {

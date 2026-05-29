@@ -30,6 +30,10 @@ type listResponse struct {
 // is empty, all DefaultModelProvider rows are copied into user_model_providers.
 // Optional query param: keyword — substring match on name (SQL LIKE).
 func ListUserProviders(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		listUserProvidersFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)
@@ -67,6 +71,10 @@ func ListUserProviders(w http.ResponseWriter, r *http.Request) {
 // ListUserProvidersWithGroups returns user_model_providers rows that have at least one non-deleted
 // user_model_provider_groups row for the current user (distinct parent ids from groups, then load providers).
 func ListUserProvidersWithGroups(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		listUserProvidersWithGroupsFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)

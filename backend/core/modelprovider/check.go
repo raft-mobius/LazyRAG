@@ -47,6 +47,10 @@ type CheckModelProviderData struct {
 
 // CheckGroup proxies to the algorithm service /api/model/check for connectivity validation.
 func CheckGroup(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		checkGroupFromFile(w, r)
+		return
+	}
 	var req checkModelProviderRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		common.ReplyErr(w, "invalid body", http.StatusBadRequest)

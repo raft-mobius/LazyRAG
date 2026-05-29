@@ -112,6 +112,10 @@ func getSharedModelDetail(ctx context.Context, db *gorm.DB, modelType string) (*
 
 // GetSelectedModels returns selected model rows for the current user.
 func GetSelectedModels(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		getSelectedModelsFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)
@@ -132,6 +136,10 @@ func GetSelectedModels(w http.ResponseWriter, r *http.Request) {
 
 // SetSelectedModels saves selected model rows by model_type for the current user.
 func SetSelectedModels(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		setSelectedModelsFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)

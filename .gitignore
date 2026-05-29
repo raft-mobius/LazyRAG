@@ -101,3 +101,6 @@ api/backend/auth-service/openapi.yml
 api/backend/auth-service/swagger.json
 api/backend/core/openapi.yml
 api/backend/core/swagger.json
+
+# Desktop dev model config (may contain API keys)
+desktop/resources/templates/dev_model_config.json

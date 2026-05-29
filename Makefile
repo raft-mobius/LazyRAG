@@ -517,6 +517,9 @@ desktop-dev-windows-exe:
 	@cd "$(DESKTOP_SRC)" && npx asar pack "$(DESKTOP_DEV_DIR)/_asar_staging" "$(DESKTOP_DEV_DIR)/electron/resources/app.asar"
 	@rm -rf "$(DESKTOP_DEV_DIR)/_asar_staging"
 	@echo "      -> electron/resources/app.asar"
+	@# ---- Pre-seed model config for dev testing ----
+	@[ -f "$(DESKTOP_SRC)/resources/templates/dev_model_config.json" ] && \
+		cp "$(DESKTOP_SRC)/resources/templates/dev_model_config.json" "$(DESKTOP_DEV_DIR)/model_config.json" || true
 	@# ---- 5. Build launcher exe ----
 	@echo "[5/5] Building launcher exe..."
 	@cd "$(DESKTOP_SRC)/cmd/launcher" && goversioninfo -icon=../../resources/icons/icon.ico

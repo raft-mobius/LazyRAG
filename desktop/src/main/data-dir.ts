@@ -13,6 +13,7 @@ export function getDataDir(): DataDirPaths {
   cachedPaths = {
     root,
     config: path.join(root, 'config.yaml'),
+    modelConfig: path.join(root, 'model_config.json'),
     data: path.join(root, 'data'),
     vector: path.join(root, 'vector'),
     segment: path.join(root, 'segment'),
@@ -51,6 +52,7 @@ export async function ensureDataDir(): Promise<void> {
   }
 
   await copyDefaultConfig();
+  await copyDefaultModelConfig();
   await copyDefaultDocs();
 }
 
@@ -69,6 +71,16 @@ async function copyDefaultConfig(): Promise<void> {
   const templatePath = getResourcePath('templates', 'default_config.yaml');
   if (fs.existsSync(templatePath)) {
     fs.copyFileSync(templatePath, dirs.config);
+  }
+}
+
+async function copyDefaultModelConfig(): Promise<void> {
+  const dirs = getDataDir();
+  if (fs.existsSync(dirs.modelConfig)) return;
+
+  const templatePath = getResourcePath('templates', 'dev_model_config.json');
+  if (fs.existsSync(templatePath)) {
+    fs.copyFileSync(templatePath, dirs.modelConfig);
   }
 }
 

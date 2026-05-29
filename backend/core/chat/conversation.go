@@ -206,7 +206,7 @@ func ChatConversations(w http.ResponseWriter, r *http.Request) {
 	}
 	reqBody := buildChatRequestBody(convID, sessionID, query, upstreamHistories, raw, resourceContext, userID)
 	historyExt := buildChatHistoryExt(raw, query)
-	llmConfig, err := modelconfig.LoadLLMConfig(r.Context(), db, userID)
+	llmConfig, err := loadLLMConfig(r.Context(), db, userID)
 	if err != nil {
 		common.ReplyErr(w, fmt.Sprintf("%s: %v", "load llm config failed", err), http.StatusInternalServerError)
 		return

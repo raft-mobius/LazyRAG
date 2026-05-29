@@ -1,6 +1,7 @@
 export interface DataDirPaths {
   root: string;
   config: string;
+  modelConfig: string;
   data: string;
   vector: string;
   segment: string;

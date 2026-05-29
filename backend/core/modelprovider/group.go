@@ -44,6 +44,10 @@ type groupListResponse struct {
 
 // ListGroups returns active connection groups for the given user model provider (path model_provider_id).
 func ListGroups(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		listGroupsFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)
@@ -106,6 +110,10 @@ type updateGroupRequest struct {
 
 // CreateGroup creates a connection group under the user's model provider (path model_provider_id = user_model_providers.id).
 func CreateGroup(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		createGroupFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)
@@ -188,6 +196,10 @@ func CreateGroup(w http.ResponseWriter, r *http.Request) {
 // UpdateGroup updates a connection group (name, base_url, optional api_key). The target group is path group_id.
 // Empty api_key in the body leaves the stored key unchanged.
 func UpdateGroup(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		updateGroupFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)
@@ -284,6 +296,10 @@ type deleteGroupResponse struct {
 
 // DeleteGroup soft-deletes a connection group and its user_model_provider_group_models rows.
 func DeleteGroup(w http.ResponseWriter, r *http.Request) {
+	if isDesktopMode() {
+		deleteGroupFromFile(w, r)
+		return
+	}
 	db := store.DB()
 	if db == nil {
 		common.ReplyErr(w, "store not initialized", http.StatusInternalServerError)
